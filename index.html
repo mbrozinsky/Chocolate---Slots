@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#21100d">
+<title>Chocolate Slots · 10-Reel Edition</title>
+<style>
+:root {
+  color-scheme: dark;
+  --paper: #fff0cd;
+  --gold: #efbe70;
+  --muted: #e0ba99;
+  --line: #996b49;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-width: 0; min-height: 100svh; display: grid; place-items: center;
+  padding: clamp(12px, 4vw, 44px);
+  background: radial-gradient(ellipse at 50% 0, #633324, #21100d 62%, #140906);
+  color: var(--paper); font: 1rem/1.5 system-ui, sans-serif;
+}
+main {
+  width: min(100%, 720px); padding: clamp(12px, 3.8vw, 34px);
+  border: 4px double var(--line); border-radius: 24px;
+  background: linear-gradient(150deg, #4e271d, #281310 55%);
+  box-shadow: 0 24px 84px #1005039e;
+}
+header { text-align: center; }
+.brand { margin: 0; color: var(--gold); font-size: .875rem; letter-spacing: .16em; font-weight: 700; }
+h1 { margin: .12em 0 0; font: 700 clamp(2.15rem, 8vw, 4.65rem)/1.04 Georgia, serif; }
+.edition { margin: .6rem 0 1.25rem; color: var(--muted); }
+.stats {
+  display: flex; justify-content: space-around; gap: .4rem; margin: 0;
+  padding: .65rem .2rem; border-block: 1px solid var(--line); text-align: center;
+}
+.stats div { flex: 1; }
+.stats div + div { border-left: 1px solid var(--line); }
+dt { font-size: .875rem; color: var(--muted); }
+dd { margin: 0; font-size: 1.35rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.jackpot { color: var(--gold); }
+.reels {
+  margin: 1.1rem 0 0; padding: 0; list-style: none; display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(4px, 1.6vw, 11px);
+}
+.reels li {
+  display: grid; place-items: center; height: clamp(54px, 13vw, 86px);
+  border: 2px solid #a97847; border-radius: 8px; color: #2e1b13;
+  background: linear-gradient(#fff4d7, #e3bc8f);
+  font: 700 clamp(.8rem, 3.25vw, 1.75rem)/1 Georgia, serif;
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.reels li.empty { background: #301814; color: #c59c79; border-color: #815639; }
+.reels li.winner { outline: 2px solid #ffe18c; outline-offset: -3px; background: #ffe5a6; box-shadow: 0 0 12px #eab76176; }
+.red { color: #a01936; }
+#result { min-height: 3.4em; display: grid; place-items: center; margin: .55rem 0; text-align: center; color: #ffe1aa; font-weight: 650; }
+.controls { display: flex; gap: .65rem; }
+button {
+  min-height: 49px; padding: .65rem .8rem; border: 1px solid #aa7855;
+  border-radius: 8px; font: inherit; font-weight: 750; color: var(--paper); background: #46251d; cursor: pointer;
+}
+button:focus-visible, summary:focus-visible { outline: 3px solid white; outline-offset: 3px; }
+#spin { flex: 1; background: linear-gradient(#ffd684, #e9a954); color: #29130b; border-color: #f8d283; }
+#spin:disabled { opacity: .55; cursor: default; }
+.paytable { width: 100%; margin-top: 1rem; border-collapse: collapse; }
+.paytable caption { text-align: left; color: var(--gold); font-weight: 750; }
+.paytable th, .paytable td { padding: .35rem .15rem; border-bottom: 1px solid #6f4633; text-align: left; }
+.paytable td { text-align: right; }
+.paytable th { font-weight: 500; }
+details { margin-top: .8rem; }
+summary { cursor: pointer; font-weight: 650; padding: .4rem 0; }
+details p { margin: .45rem 0; color: var(--muted); }
+footer { margin-top: .65rem; text-align: center; color: var(--muted); font-size: .875rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="brand">WATCH YOUR CHOCOLATES!</p>
+    <h1>Chocolate Slots</h1>
+    <p class="edition">10-Reel Edition · Play credits only</p>
+  </header>
+  <dl class="stats">
+    <div><dt>Credits</dt><dd id="balance">100</dd></div>
+    <div><dt>Spins</dt><dd id="spins">0</dd></div>
+    <div><dt>Jackpot</dt><dd class="jackpot">50</dd></div>
+  </dl>
+  <ol class="reels" id="reels" aria-label="Ten reels"></ol>
+  <p id="result" role="status">Spin to draw ten cards from the 78-card deck.</p>
+  <div class="controls">
+    <button id="spin" type="button">Spin · 1 credit</button>
+    <button id="reset" type="button">New game</button>
+  </div>
+  <table class="paytable">
+    <caption>Paytable</caption>
+    <tbody>
+      <tr><th scope="row">8 or more cards · Jackpot</th><td class="jackpot">50 credits</td></tr>
+      <tr><th scope="row">7 cards</th><td>10 credits</td></tr>
+      <tr><th scope="row">6 cards</th><td>2 credits</td></tr>
+      <tr><th scope="row">5 cards</th><td>1 credit</td></tr>
+      <tr><th scope="row">4 cards</th><td>0 credits</td></tr>
+    </tbody>
+  </table>
+  <details>
+    <summary>How to play</summary>
+    <p>You start with 100 play credits. Each spin costs one credit and draws ten different cards from a fresh 78-card deck. The longest pattern sets your payout. A five-card pattern earns back the cost of the spin.</p>
+    <p><strong>Chocolate Chain.</strong> Both numbers rise from card to card. For example, (2, 4), (4, 7), (6, 9).</p>
+    <p><strong>No Chocolate group.</strong> In any pair, neither card has both numbers strictly higher than the other. For example, (1, 10), (2, 9), (2, 8).</p>
+    <p>Cards can appear anywhere on the reels. Gold highlights show one longest pattern. When both types tie, the game shows the chain.</p>
+  </details>
+  <footer>Game by Michael Brozinsky</footer>
+</main>
+<script>
+"use strict";
+
+const reelCount = 10;
+const startingCredits = 100;
+const deck = [];
+for (let red = 1; red <= 12; red++) {
+  for (let black = red + 1; black <= 13; black++) deck.push({ red, black });
+}
+
+function drawCards(random = Math.random) {
+  const cards = deck.slice();
+  for (let i = 0; i < reelCount; i++) {
+    const j = i + Math.floor(random() * (cards.length - i));
+    [cards[i], cards[j]] = [cards[j], cards[i]];
+  }
+  return cards.slice(0, reelCount);
+}
+
+function longestPattern(sorted, canFollow) {
+  const paths = sorted.map(card => [card]);
+  let best = [];
+  for (let i = 0; i < sorted.length; i++) {
+    for (let j = 0; j < i; j++) {
+      if (paths[j].length + 1 > paths[i].length && canFollow(sorted[j], sorted[i])) {
+        paths[i] = [...paths[j], sorted[i]];
+      }
+    }
+    if (paths[i].length > best.length) best = paths[i];
+  }
+  return best;
+}
+
+function evaluate(cards) {
+  // Descending black values within a red tie allow equal-red cards in a group.
+  const sorted = [...cards].sort((a, b) => a.red - b.red || b.black - a.black);
+  const chain = longestPattern(sorted, (a, b) => a.red < b.red && a.black < b.black);
+  const group = longestPattern(sorted, (a, b) => a.black >= b.black);
+  const showChain = chain.length >= group.length;
+  const winners = showChain ? chain : group;
+  const payoutByLength = [0, 0, 0, 0, 0, 1, 2, 10, 50, 50, 50];
+  return {
+    winners,
+    type: showChain ? "Chocolate Chain" : "No Chocolate group",
+    payout: payoutByLength[winners.length]
+  };
+}
+
+const reels = document.querySelector("#reels");
+const balance = document.querySelector("#balance");
+const spinCount = document.querySelector("#spins");
+const status = document.querySelector("#result");
+const spinButton = document.querySelector("#spin");
+let credits = startingCredits;
+let spins = 0;
+
+function render(cards = [], winners = []) {
+  balance.textContent = credits;
+  spinCount.textContent = spins;
+  spinButton.disabled = credits < 1;
+  const tiles = Array.from({ length: reelCount }, (_, i) => {
+    const tile = document.createElement("li");
+    const card = cards[i];
+    if (!card) {
+      tile.className = "empty";
+      tile.textContent = "–";
+      return tile;
+    }
+    const red = document.createElement("span");
+    red.className = "red";
+    red.textContent = card.red;
+    const pair = document.createElement("span");
+    pair.append("(", red, ", " + card.black + ")");
+    tile.append(pair);
+    if (winners.includes(card)) {
+      tile.classList.add("winner");
+      tile.setAttribute("aria-label", "(" + card.red + ", " + card.black + "), highlighted");
+    }
+    return tile;
+  });
+  reels.replaceChildren(...tiles);
+}
+
+spinButton.addEventListener("click", () => {
+  if (credits < 1) return;
+  const cards = drawCards();
+  const { winners, type, payout } = evaluate(cards);
+  credits += payout - 1;
+  spins++;
+  render(cards, winners);
+  const prize = payout === 1 ? "1 credit returned" : payout + " credits paid";
+  const result = winners.length + "-card " + type + " · " + prize;
+  status.textContent = (payout === 50 ? "Jackpot! " : "") + result +
+    (credits === 0 ? ". Choose New game to play again." : ".");
+});
+
+document.querySelector("#reset").addEventListener("click", () => {
+  credits = startingCredits;
+  spins = 0;
+  render();
+  status.textContent = "Spin to draw ten cards from the 78-card deck.";
+  spinButton.focus();
+});
+
+render();
+</script>
+</body>
+</html>
