@@ -63,13 +63,14 @@ dd { margin: 0; font-size: 1.35rem; font-weight: 750; font-variant-numeric: tabu
 }
 .red { color: #a01936; }
 #result { min-height: 3.4em; display: grid; place-items: center; margin: .55rem 0; text-align: center; color: #ffe1aa; font-weight: 650; }
-.controls { display: flex; gap: .65rem; }
+.controls { display: flex; flex-wrap: wrap; gap: .65rem; }
 button {
   min-height: 49px; padding: .65rem .8rem; border: 1px solid #aa7855;
   border-radius: 8px; font: inherit; font-weight: 750; color: var(--paper); background: #46251d; cursor: pointer;
 }
 button:focus-visible, summary:focus-visible { outline: 3px solid white; outline-offset: 3px; }
 #spin { flex: 1; background: linear-gradient(#ffd684, #e9a954); color: #29130b; border-color: #f8d283; }
+@media (max-width: 420px) { #show-winners { flex-basis: 100%; } }
 button:disabled { opacity: .55; cursor: default; }
 .paytable { width: 100%; margin-top: 1rem; border-collapse: collapse; }
 .paytable caption { text-align: left; color: var(--gold); font-weight: 750; }
@@ -103,6 +104,7 @@ footer { margin-top: .65rem; text-align: center; color: var(--muted); font-size:
   <div class="controls">
     <button id="spin" type="button">Spin · 1 credit</button>
     <button id="reset" type="button">New game</button>
+    <button id="show-winners" type="button" aria-controls="reels" disabled>Show winning cards</button>
   </div>
   <table class="paytable">
     <caption>Paytable</caption>
@@ -120,6 +122,7 @@ footer { margin-top: .65rem; text-align: center; color: var(--muted); font-size:
     <p><strong>Chocolate Chain.</strong> Both numbers rise from card to card. For example, (2, 4), (4, 7), (6, 9).</p>
     <p><strong>No Chocolate group.</strong> In any pair, neither card has both numbers strictly higher than the other. For example, (1, 10), (2, 9), (2, 8).</p>
     <p>Cards can appear anywhere on the reels. Light blue highlights show one longest pattern. When both types tie, the game shows the chain.</p>
+    <p>After a paying spin, choose <strong>Show winning cards</strong> to group the blue cards from left to right, starting in the top row. Choose <strong>Show original order</strong> to put the cards back where they landed.</p>
     <p>When a spin pays out, the hand score is the sum of both numbers on every highlighted card.</p>
     <p><strong>Super Bonus.</strong> Each game draws a target from 50 through 75 and displays it above the reels. If a paying hand scores exactly that number, you earn 100 extra play credits on top of the regular payout. Scores above or below the target earn only the regular payout. You can earn the bonus once per game. Choose <strong>New game</strong> to draw a target and make the bonus available again.</p>
   </details>
@@ -184,10 +187,13 @@ const bonusEarned = document.querySelector("#bonus-earned");
 const status = document.querySelector("#result");
 const spinButton = document.querySelector("#spin");
 const resetButton = document.querySelector("#reset");
+const showWinnersButton = document.querySelector("#show-winners");
+const showWinnersLabel = showWinnersButton.textContent;
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 let credits;
 let spins;
 let bonusTarget;
+let payingHand;
 
 function cardFace(card) {
   const red = document.createElement("span");
@@ -257,6 +263,7 @@ async function spinReel(tile, card, index) {
 
 spinButton.addEventListener("click", async () => {
   if (spinButton.disabled || credits < 1) return;
+  showWinnersButton.disabled = true;
   const cards = drawCards();
   const { winners, type, payout } = evaluate(cards);
   const restoreFocus = document.activeElement === spinButton;
@@ -283,6 +290,9 @@ spinButton.addEventListener("click", async () => {
   }
   credits += payout;
   render(cards, winners);
+  payingHand = payout > 0 ? { cards, winners, grouped: false } : null;
+  showWinnersButton.textContent = showWinnersLabel;
+  showWinnersButton.disabled = !payingHand;
   const prize = payout === 1 ? "1 credit returned" : payout + " credits paid";
   const scoreText = payout > 0 ? " · Hand score " + score : "";
   const result = winners.length + "-card " + type + scoreText + " · " + prize;
@@ -293,12 +303,24 @@ spinButton.addEventListener("click", async () => {
   }
 });
 
+showWinnersButton.addEventListener("click", () => {
+  if (showWinnersButton.disabled || !payingHand) return;
+  const { cards, winners } = payingHand;
+  payingHand.grouped = !payingHand.grouped;
+  const orderedCards = payingHand.grouped ? [...winners, ...cards.filter(card => !winners.includes(card))] : cards;
+  render(orderedCards, winners);
+  showWinnersButton.textContent = payingHand.grouped ? "Show original order" : showWinnersLabel;
+});
+
 function startGame() {
   credits = startingCredits;
   spins = 0;
   bonusTarget = minBonusTarget + Math.floor(Math.random() * (maxBonusTarget - minBonusTarget + 1));
   bonusTargetDisplay.textContent = bonusTarget;
   bonusEarned.hidden = true;
+  payingHand = null;
+  showWinnersButton.textContent = showWinnersLabel;
+  showWinnersButton.disabled = true;
   render();
   status.textContent = "Spin to draw ten cards from the 78-card deck.";
 }
