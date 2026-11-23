@@ -39,6 +39,8 @@ h1 { margin: .12em 0 0; font: 700 clamp(2.15rem, 8vw, 4.65rem)/1.04 Georgia, ser
 dt { font-size: .875rem; color: var(--muted); }
 dd { margin: 0; font-size: 1.35rem; font-weight: 750; font-variant-numeric: tabular-nums; }
 .jackpot { color: var(--gold); }
+#bonus-earned { display: block; color: var(--gold); font-size: .8rem; }
+#bonus-earned[hidden] { display: none; }
 .reels {
   margin: 1.1rem 0 0; padding: 0; list-style: none; display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(4px, 1.6vw, 11px);
@@ -91,6 +93,10 @@ footer { margin-top: .65rem; text-align: center; color: var(--muted); font-size:
     <div><dt>Credits</dt><dd id="balance">100</dd></div>
     <div><dt>Spins</dt><dd id="spins">0</dd></div>
     <div><dt>Jackpot</dt><dd class="jackpot">50</dd></div>
+    <div>
+      <dt>Super Bonus Target</dt>
+      <dd class="jackpot"><span id="bonus-target"></span><small id="bonus-earned" hidden>Earned</small></dd>
+    </div>
   </dl>
   <ol class="reels" id="reels" aria-label="Ten reels"></ol>
   <p id="result" role="status">Spin to draw ten cards from the 78-card deck.</p>
@@ -114,6 +120,8 @@ footer { margin-top: .65rem; text-align: center; color: var(--muted); font-size:
     <p><strong>Chocolate Chain.</strong> Both numbers rise from card to card. For example, (2, 4), (4, 7), (6, 9).</p>
     <p><strong>No Chocolate group.</strong> In any pair, neither card has both numbers strictly higher than the other. For example, (1, 10), (2, 9), (2, 8).</p>
     <p>Cards can appear anywhere on the reels. Gold highlights show one longest pattern. When both types tie, the game shows the chain.</p>
+    <p>When a spin pays out, the hand score is the sum of both numbers on every highlighted card.</p>
+    <p><strong>Super Bonus.</strong> Each game draws a target from 50 through 75 and displays it above the reels. If a paying hand scores exactly that number, you earn 100 extra play credits on top of the regular payout. Scores above or below the target earn only the regular payout. You can earn the bonus once per game. Choose <strong>New game</strong> to draw a target and make the bonus available again.</p>
   </details>
   <footer>Game by Michael Brozinsky</footer>
 </main>
@@ -122,6 +130,9 @@ footer { margin-top: .65rem; text-align: center; color: var(--muted); font-size:
 
 const reelCount = 10;
 const startingCredits = 100;
+const superBonusCredits = 100;
+const minBonusTarget = 50;
+const maxBonusTarget = 75;
 const deck = [];
 for (let red = 1; red <= 12; red++) {
   for (let black = red + 1; black <= 13; black++) deck.push({ red, black });
@@ -168,12 +179,15 @@ function evaluate(cards) {
 const reels = document.querySelector("#reels");
 const balance = document.querySelector("#balance");
 const spinCount = document.querySelector("#spins");
+const bonusTargetDisplay = document.querySelector("#bonus-target");
+const bonusEarned = document.querySelector("#bonus-earned");
 const status = document.querySelector("#result");
 const spinButton = document.querySelector("#spin");
 const resetButton = document.querySelector("#reset");
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-let credits = startingCredits;
-let spins = 0;
+let credits;
+let spins;
+let bonusTarget;
 
 function cardFace(card) {
   const red = document.createElement("span");
@@ -260,26 +274,41 @@ spinButton.addEventListener("click", async () => {
     reels.removeAttribute("aria-busy");
     resetButton.disabled = false;
   }
+  const score = winners.reduce((total, card) => total + card.red + card.black, 0);
+  let bonusText = "";
+  if (payout > 0 && score === bonusTarget && bonusEarned.hidden) {
+    credits += superBonusCredits;
+    bonusEarned.hidden = false;
+    bonusText = " · Super Bonus +" + superBonusCredits + " credits!";
+  }
   credits += payout;
   render(cards, winners);
   const prize = payout === 1 ? "1 credit returned" : payout + " credits paid";
-  const result = winners.length + "-card " + type + " · " + prize;
-  status.textContent = (payout === 50 ? "Jackpot! " : "") + result +
-    (credits === 0 ? ". Choose New game to play again." : ".");
+  const scoreText = payout > 0 ? " · Hand score " + score : "";
+  const result = winners.length + "-card " + type + scoreText + " · " + prize;
+  status.textContent = (payout === 50 ? "Jackpot! " : "") + result + (bonusText || ".") +
+    (credits === 0 ? " Choose New game to play again." : "");
   if (restoreFocus && document.activeElement === document.body) {
     (spinButton.disabled ? resetButton : spinButton).focus();
   }
 });
 
-resetButton.addEventListener("click", () => {
+function startGame() {
   credits = startingCredits;
   spins = 0;
+  bonusTarget = minBonusTarget + Math.floor(Math.random() * (maxBonusTarget - minBonusTarget + 1));
+  bonusTargetDisplay.textContent = bonusTarget;
+  bonusEarned.hidden = true;
   render();
   status.textContent = "Spin to draw ten cards from the 78-card deck.";
+}
+
+resetButton.addEventListener("click", () => {
+  startGame();
   spinButton.focus();
 });
 
-render();
+startGame();
 </script>
 </body>
 </html>
