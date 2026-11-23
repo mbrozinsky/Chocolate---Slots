@@ -104,7 +104,7 @@ footer { margin-top: .65rem; text-align: center; color: var(--muted); font-size:
     <div><dt>Jackpot</dt><dd class="jackpot">50</dd></div>
     <div>
       <dt>Super Bonus Target</dt>
-      <dd class="jackpot"><span id="bonus-target"></span><small id="bonus-earned" hidden>Earned</small></dd>
+      <dd class="jackpot"><span id="bonus-target"></span><small id="bonus-earned" hidden>+100 this spin</small></dd>
     </div>
   </dl>
   <ol class="reels" id="reels" aria-label="Ten reels"></ol>
@@ -118,7 +118,7 @@ footer { margin-top: .65rem; text-align: center; color: var(--muted); font-size:
     <caption>Paytable</caption>
     <tbody>
       <tr><th scope="row">8 or more cards · Jackpot</th><td class="jackpot">50 credits</td></tr>
-      <tr><th scope="row">7 cards</th><td>10 credits</td></tr>
+      <tr><th scope="row">7 cards</th><td>7 credits</td></tr>
       <tr><th scope="row">6 cards</th><td>2 credits</td></tr>
       <tr><th scope="row">5 cards</th><td>1 credit</td></tr>
       <tr><th scope="row">4 cards</th><td>0 credits</td></tr>
@@ -132,7 +132,7 @@ footer { margin-top: .65rem; text-align: center; color: var(--muted); font-size:
     <p>Cards can appear anywhere on the reels. Light blue highlights show one longest pattern. When both types tie, the game shows the chain.</p>
     <p>After a paying spin, choose <strong>Show winning cards</strong> to group the blue cards from left to right, starting in the top row. Choose <strong>Show original order</strong> to put the cards back where they landed.</p>
     <p>When a spin pays out, the hand score is the sum of both numbers on every highlighted card.</p>
-    <p><strong>Super Bonus.</strong> Each game draws a target from 50 through 75 and displays it above the reels. If a paying hand scores exactly that number, you earn 100 extra play credits on top of the regular payout. Scores above or below the target earn only the regular payout. You can earn the bonus once per game. Choose <strong>New game</strong> to draw a target and make the bonus available again.</p>
+    <p><strong>Super Bonus.</strong> Each game draws a target from 70 through 75 and displays it above the reels. Earn 100 extra play credits when the highlighted paying pattern scores exactly that target and its red numbers, in increasing order, form an arithmetic progression with a positive common difference. For example, 2, 4, 6, 8, 10 qualifies. All highlighted cards must belong to that progression. The bonus is available on every spin and is added to the regular payout. Choose <strong>New game</strong> to draw a target.</p>
   </details>
   <footer>Game by Michael Brozinsky</footer>
 </main>
@@ -142,7 +142,7 @@ footer { margin-top: .65rem; text-align: center; color: var(--muted); font-size:
 const reelCount = 10;
 const startingCredits = 100;
 const superBonusCredits = 100;
-const minBonusTarget = 50;
+const minBonusTarget = 70;
 const maxBonusTarget = 75;
 const deck = [];
 for (let red = 1; red <= 12; red++) {
@@ -179,12 +179,18 @@ function evaluate(cards) {
   const group = longestPattern(sorted, (a, b) => a.black >= b.black);
   const showChain = chain.length >= group.length;
   const winners = showChain ? chain : group;
-  const payoutByLength = [0, 0, 0, 0, 0, 1, 2, 10, 50, 50, 50];
+  const payoutByLength = [0, 0, 0, 0, 0, 1, 2, 7, 50, 50, 50];
   return {
     winners,
     type: showChain ? "Chocolate Chain" : "No Chocolate group",
     payout: payoutByLength[winners.length]
   };
+}
+
+function qualifiesForSuperBonus(winners, payout, score, target) {
+  if (payout === 0 || score !== target) return false;
+  const step = winners[1].red - winners[0].red;
+  return step > 0 && winners.every((card, index) => card.red === winners[0].red + index * step);
 }
 
 const reels = document.querySelector("#reels");
@@ -284,6 +290,7 @@ async function spinReel(tile, card, index) {
 spinButton.addEventListener("click", async () => {
   if (spinButton.disabled || credits < 1) return;
   showWinnersButton.disabled = true;
+  bonusEarned.hidden = true;
   const cards = drawCards();
   const { winners, type, payout } = evaluate(cards);
   const restoreFocus = document.activeElement === spinButton;
@@ -302,7 +309,7 @@ spinButton.addEventListener("click", async () => {
   resetButton.disabled = false;
   const score = winners.reduce((total, card) => total + card.red + card.black, 0);
   let bonusText = "";
-  if (payout > 0 && score === bonusTarget && bonusEarned.hidden) {
+  if (qualifiesForSuperBonus(winners, payout, score, bonusTarget)) {
     credits += superBonusCredits;
     bonusEarned.hidden = false;
     bonusText = " · Super Bonus +" + superBonusCredits + " credits!";
