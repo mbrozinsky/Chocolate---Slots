@@ -55,7 +55,15 @@ dd { margin: 0; font-size: 1.35rem; font-weight: 750; font-variant-numeric: tabu
 .reels li.empty { background: #301814; color: #c59c79; border-color: #815639; }
 .reels li.winner { outline: 2px solid #377da8; outline-offset: -3px; background: #c9ecff; box-shadow: 0 0 12px #79c8f276; }
 .reels li.spinning { position: relative; overflow: hidden; }
-.reel-strip { position: absolute; inset: 0; }
+.reel-strip {
+  position: absolute; inset: 0;
+  animation: reel-spin var(--spin-duration) cubic-bezier(.2, .65, .4, 1) both;
+}
+@keyframes reel-spin {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--spin-distance)); }
+}
+@media (prefers-reduced-motion: reduce) { .reel-strip { animation: none; } }
 .reel-strip > span { display: grid; place-items: center; height: 100%; }
 .spinning::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
@@ -226,6 +234,19 @@ function render(cards = [], winners = []) {
   reels.replaceChildren(...tiles);
 }
 
+function wait(milliseconds) {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+async function revealReel(tile, card, index) {
+  tile.className = "empty";
+  tile.removeAttribute("aria-label");
+  tile.textContent = "–";
+  await wait(320 + index * 65);
+  tile.replaceChildren(cardFace(card));
+  tile.classList.remove("empty");
+}
+
 async function spinReel(tile, card, index) {
   const strip = document.createElement("div");
   strip.className = "reel-strip";
@@ -248,17 +269,16 @@ async function spinReel(tile, card, index) {
   finalSlot.append(finalFace);
   strip.append(finalSlot);
 
+  const duration = 720 + index * 105;
+  strip.style.setProperty("--spin-distance", `-${100 * (previewCount + 1)}%`);
+  strip.style.setProperty("--spin-duration", `${duration}ms`);
   tile.className = "spinning";
   tile.removeAttribute("aria-label");
   tile.append(strip);
-  const animation = strip.animate(
-    [{ transform: "translateY(0)" }, { transform: `translateY(-${100 * (previewCount + 1)}%)` }],
-    { duration: 720 + index * 105, easing: "cubic-bezier(.2, .65, .4, 1)", fill: "forwards" }
-  );
-  await animation.finished;
+  // Allow time for the CSS animation to start on the next paint.
+  await wait(duration + 60);
   tile.replaceChildren(finalFace);
   tile.classList.remove("spinning");
-  animation.cancel();
 }
 
 spinButton.addEventListener("click", async () => {
@@ -271,16 +291,15 @@ spinButton.addEventListener("click", async () => {
   spins++;
   balance.textContent = credits;
   spinCount.textContent = spins;
-  if (!reducedMotion.matches) {
-    spinButton.disabled = true;
-    resetButton.disabled = true;
-    reels.setAttribute("aria-busy", "true");
-    status.textContent = "Spinning…";
-    const tiles = Array.from(reels.children);
-    await Promise.all(cards.map((card, index) => spinReel(tiles[index], card, index)));
-    reels.removeAttribute("aria-busy");
-    resetButton.disabled = false;
-  }
+  spinButton.disabled = true;
+  resetButton.disabled = true;
+  reels.setAttribute("aria-busy", "true");
+  const animateReel = reducedMotion.matches ? revealReel : spinReel;
+  status.textContent = reducedMotion.matches ? "Revealing cards…" : "Spinning…";
+  const tiles = Array.from(reels.children);
+  await Promise.all(cards.map((card, index) => animateReel(tiles[index], card, index)));
+  reels.removeAttribute("aria-busy");
+  resetButton.disabled = false;
   const score = winners.reduce((total, card) => total + card.red + card.black, 0);
   let bonusText = "";
   if (payout > 0 && score === bonusTarget && bonusEarned.hidden) {
